@@ -4,11 +4,10 @@ const morgan = require('morgan');
 
 const blogsRouter = require('./blogs-router');
 const {DATABASE_URL, PORT} = require('./config');
-
 const app = express();
-app.use(morgan);
+app.use(morgan('common'));
 
-app.use('/blog-posts', blogRouter);
+app.use('/blog-posts', blogsRouter);
 
 let server;
 

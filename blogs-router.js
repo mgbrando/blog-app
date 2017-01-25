@@ -1,7 +1,5 @@
-
+//const uuid = require('uuid');
 const mongoose = require('mongoose');
-
-mongoose.Promise = global.Promise;
 
 const express = require('express');
 const router = express.Router();
@@ -9,6 +7,8 @@ const router = express.Router();
 const {BlogPost} = require('./models');
 const bodyParser = require('body-parser');
 const jsonParser = bodyParser.json();
+
+mongoose.Promise = global.Promise;
 
 /*BlogPosts.create('The Only Book', 'Everything', 'Matthew Brando', Date.now());
 BlogPosts.create('The Jungle Book', 'A kid and animals', 'Some person', Date.now());*/
@@ -19,62 +19,21 @@ function checkFields(requestBody, requiredFields){
 		if(!(field in requestBody)){
 			const message = `\`${field}\` property missing in request.`;
 			console.error(message);
-			return res.status(400).send(message);
+			throw Error(message);
 		}
 	}
 }
-
-router.get('/', (req, res) => {
-	res.json(BlogPosts.get());
-});
-
-router.get('/:id', (req, res) => {
-	res.json(BlogPosts.get(req.params.id));
-});
-
-router.post('/', jsonParser, (req, res) => {
-	checkFields(req.body, ['title', 'content', 'firstName', 'lastName']);
-	res.status(201).json(BlogPosts.create(
-		req.body.title,
-		req.body.content,
-		req.body.author,
-		req.body.publishDate || null
-	));
-});
-
-router.delete('/:id', (req, res) => {
-	BlogPosts.delete(req.params.id);
-	console.log(`Deleted blog post with ID of \`${req.params.id}\``);
-	res.status(204).end();
-});
-
-router.put('/:id', jsonParser, (req, res) => {
-	checkFields(req.body, ['title', 'content', 'firstName', 'lastName']);
-	if(req.params.id !== req.body.id){
-		const message = `Path id \`${req.params.id}\` and request body id`
-		 `\`${req.body.id}\` must be the same.`;
-		console.error(message);
-		res.status(400).send(message);
-	}
-	res.status(200).json(BlogPosts.update({
-		id: req.body.id,
-		title: req.body.title,
-		content: req.body.content,
-		author: req.body.author,
-		publishDate: req.body.publishDate || null
-	}));
-});
 
 //New ones
 router.get('/', (req, res) => {
 	BlogPost
 		.find()
 		.exec()
-		.then(blogPosts => {
+		.then(blogs => {
 			res.status(200).json({
-				blogPosts: blogPosts.map(blogPost => {
-					blogPost.apiRepr();
-				});
+				blogPosts: blogs.map(blogPost => {
+					return blogPost.apiRepr();
+				})
 			});
 		})
 		.catch(err => {
@@ -88,9 +47,9 @@ router.get('/:id', (req, res) => {
 		.findById(req.params.id)
 		.exec()
 		.then(blogPost => {
-			res.status(200).json({
-				blogPost.apiRepr();
-			});
+			res.status(200).json(
+				blogPost.apiRepr()
+			);
 		})
 		.catch(err => {
 			console.error(err);
@@ -99,22 +58,24 @@ router.get('/:id', (req, res) => {
 });
 
 router.post('/', jsonParser, (req, res) => {
-	checkFields(req.body, ['title', 'content', 'firstName', 'lastName']);
+	try{
+		checkFields(req.body, ['title', 'content', 'author']);
+	}
+	catch(err){
+		res.status(400).send(err.message);
+		return;
+	}
 	BlogPost
 		.create({
 			title: req.body.title,
-			content: req.body. content,
-			author:{
-				firstName: req.body.firstName,
-				lastName: req.body.lastName
-			}
+			content: req.body.content,
+			author: req.body.author,
 			created: req.body.created || Date.now()
 		})
-		.exec()
 		.then(blogPost => {
-			res.status(201).json({
-				blogPost.apiRepr();
-			});
+			res.status(201).json(
+				blogPost.apiRepr()
+			);
 		})
 		.catch(err => {
 			console.error(err);
@@ -137,15 +98,21 @@ router.delete('/:id', (req, res) => {
 });
 
 router.put('/:id', jsonParser, (req, res) => {
-	checkFields(req.body, ['title', 'content', 'firstName', 'lastName']);
+	try{
+		checkFields(req.body, ['title', 'content', 'author']);
+	}
+	catch(err){
+		res.status(400).send(err.message);
+		return;
+	}
 	if(!(req.params.id && req.body.id && req.params.id === req.body.id)){
-		const message = `Path id \`${req.params.id}\` and request body id`
-		 `\`${req.body.id}\` must be the same.`;
+		const message = `Path id \`${req.params.id}\` and request body id
+		 \`${req.body.id}\` must be the same.`;
 		console.error(message);
 		res.status(400).send(message);
 	}
 	toUpdate = {};
-	updatableFields = ['title', 'content', 'firstName', 'lastName']
+	updatableFields = ['title', 'content', 'author']
 	updatableFields.forEach(field => {
 		if(field in req.body)
 			toUpdate[field] = req.body[field];
@@ -154,9 +121,9 @@ router.put('/:id', jsonParser, (req, res) => {
 		.findByIdAndUpdate(req.params.id, {$set: toUpdate})
 		.exec()
 		.then(blogPost => {
-			res.status(200).json({
-				blogPost.apiRepr();
-			});
+			res.status(200).json(
+				blogPost.apiRepr()
+			);
 		})
 		.catch(err => {
 			console.error(err);

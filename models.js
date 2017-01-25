@@ -1,27 +1,31 @@
 const mongoose = require('mongoose');
 
 
-const AuthorSchema = mongoose.Schema({
+/*const AuthorSchema = mongoose.Schema({
     firstName: {type: String, required: true},
     lastName: {type: String, required: true}
-});
+});*/
 
 const blogPostSchema = mongoose.Schema({
 	title: {type: String, required: true},
 	content: {type: String, required: true},
-	author: {
-		type: Schema.ObjectId,
-		ref: Author,
+	/*author: {
+		type: (mongoose.Schema).ObjectId,
+		ref: 'Author',
 		required: true
+	},*/
+	author:{
+		firstName: String,
+		lastName: String
 	},
 	created: {type: Date, default: Date.now}
 });
 
 blogPostSchema.virtual('fullName').get(function(){
-	return `${this.firstName} ${this.lastName}`.trim();
+	return `${this.author.firstName} ${this.author.lastName}`.trim();
 });
 
-blogSchema.methods.apiRepr = function(){
+blogPostSchema.methods.apiRepr = function(){
 	return {
 		title: this.title,
 		content: this.content,
